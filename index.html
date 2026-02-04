@@ -275,7 +275,7 @@
                 <!-- Total Students Input -->
                 <div class="flex items-center gap-3">
                     <label for="lottery-total-count" class="text-gray-700 font-bold text-base whitespace-nowrap">总人数:</label>
-                    <input type="number" id="lottery-total-count" value="40" min="1" max="100" class="lottery-input h-10">
+                    <input type="number" id="lottery-total-count" value="60" min="1" max="100" class="lottery-input h-10">
                 </div>
 
                 <!-- Draw Count Input -->
@@ -411,7 +411,7 @@
     </div>
 
     <footer class="text-center py-1 text-gray-500 text-sm sm:text-base fixed bottom-0 left-0 right-0 bg-white/60 backdrop-blur-sm z-50">
-        <p>版权所有：福州市鼓楼第一中心小学</p>
+        <p>有需要联系公众号：字里行间的算法</p>
     </footer>
     
     <script>
@@ -439,7 +439,7 @@
     (function() {
         const container = document.getElementById('page-rixin'); if (!container) return;
         let timers = [];
-        const TOTAL_BUBBLES = 40;
+        const TOTAL_BUBBLES = 60;
         let cycleDurationMs = 600000;
 
         const bubblesContainer = container.querySelector('#rixin-bubbles-container'),
@@ -706,7 +706,7 @@
     // --- App 2: 泡泡抢位 ---
     (function() {
         const container = document.getElementById('page-bubbles'); if (!container) return;
-        const TOTAL_BUBBLES = 40; let allBubblesData = [], selectedBubbleIdsInOrder = [], gameActive = false, animationFrameId = null;
+        const TOTAL_BUBBLES = 60; let allBubblesData = [], selectedBubbleIdsInOrder = [], gameActive = false, animationFrameId = null;
         const bubblesContainer = container.querySelector('#bubbles-bubbles-container'), startBtn = container.querySelector('#bubbles-start-btn'), resetBtn = container.querySelector('#bubbles-reset-btn'), exportBtn = container.querySelector('#bubbles-export-btn');
         function formatTime(ms) { const s = Math.floor(ms / 1000); return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
         const numberToChineseOrdinal = (num) => { const N = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]; if (num <= 10) return `第${N[num]}`; if (num < 20) return `第十${N[num % 10] || ''}`; const ten = Math.floor(num/10), one = num % 10; return `第${N[ten]}十${one > 0 ? N[one] : ''}`; };
@@ -731,13 +731,13 @@
               winnerCountEl = container.querySelector('#lottery-winner-count'),
               poolCountEl = container.querySelector('#lottery-pool-count');
 
-        let totalStudents = 40;
+        let totalStudents = 60;
         let drawCount = 5; // Default 5
         let winners = new Set();
 
         function renderGrid() {
             grid.innerHTML = '';
-            totalStudents = parseInt(totalInput.value) || 40;
+            totalStudents = parseInt(totalInput.value) || 60;
             
             for(let i=1; i<=totalStudents; i++) {
                 const bubble = document.createElement('div');
@@ -847,7 +847,7 @@
     (function() {
         const container = document.getElementById('page-errors'); if (!container) return;
         const studentListContainer = container.querySelector('#errors-student-list'), questionBubblesContainer = container.querySelector('#errors-question-bubbles'), exportBtn = container.querySelector('#errors-export-btn'), currentStudentIndicator = container.querySelector('#errors-current-student-indicator');
-        const NUM_STUDENTS = 40, NUM_QUESTIONS = 25; let studentData = {}, currentStudentId = null;
+        const NUM_STUDENTS = 60, NUM_QUESTIONS = 25; let studentData = {}, currentStudentId = null;
         function loadStudentErrors() { if (!currentStudentId) return; const errors = studentData[currentStudentId] || []; document.querySelectorAll('#page-errors .question-bubble').forEach(bubble => { const qId = parseInt(bubble.dataset.questionId); bubble.classList.remove('error', 'all-correct'); if (errors.includes(qId)) bubble.classList.add(qId === 0 ? 'all-correct' : 'error'); }); }
         function selectStudent(studentId) { if (currentStudentId) document.querySelector(`#page-errors .student-item[data-student-id='${currentStudentId}']`)?.classList.remove('selected'); document.querySelector(`#page-errors .student-item[data-student-id='${studentId}']`)?.classList.add('selected'); currentStudentId = studentId; if(currentStudentIndicator) currentStudentIndicator.textContent = `正在为 ${currentStudentId}号 学生记录错题`; loadStudentErrors(); }
         function toggleQuestionError(questionId) { if (!currentStudentId) { alert('请先选择学生'); return; } let errors = studentData[currentStudentId]; const index = errors.indexOf(questionId); if (questionId === 0) { errors = index > -1 ? [] : [0]; } else { if (errors.includes(0)) errors = []; if (index > -1) errors.splice(index, 1); else errors.push(questionId); } studentData[currentStudentId] = errors; loadStudentErrors(); const studentEl = document.querySelector(`#page-errors .student-item[data-student-id='${currentStudentId}']`); if (studentEl) studentEl.classList.toggle('recorded', errors.length > 0); }
@@ -860,7 +860,7 @@
     (function() {
         const container = document.getElementById('page-tasks'); if (!container) return;
         const gridContainer = container.querySelector('#tasks-grid-container'), exportBtn = container.querySelector('#tasks-export-btn'), modeToggleBtn = container.querySelector('#tasks-mode-toggle-btn');
-        const NUM_STUDENTS = 40, NUM_TASKS = 15; let scoreData = {}, isDecrementMode = true;
+        const NUM_STUDENTS = 60, NUM_TASKS = 15; let scoreData = {}, isDecrementMode = true;
         function handleCellClick(e) { const cell=e.target,s=cell.dataset.student,t=cell.dataset.task,key=`s${s}-t${t}`; let score=scoreData[key]; if(isDecrementMode){score--;if(score<0)score=0;}else{score++;if(score>3)score=3;} scoreData[key]=score; cell.textContent=score; cell.className='score-cell'; cell.classList.add(`score-${score}`); }
         function toggleMode() { isDecrementMode=!isDecrementMode; if(isDecrementMode){modeToggleBtn.textContent='当前为：减分模式';modeToggleBtn.classList.remove('bg-green-500','hover:bg-green-600');modeToggleBtn.classList.add('bg-blue-500','hover:bg-blue-600');}else{modeToggleBtn.textContent='当前为：加分模式';modeToggleBtn.classList.remove('bg-blue-500','hover:bg-blue-600');modeToggleBtn.classList.add('bg-green-500','hover:bg-green-600');} }
         function initializeGrid() { if(!gridContainer) return; gridContainer.innerHTML=''; const corner=document.createElement('div'); corner.className='grid-header grid-student-id'; corner.textContent='学号'; gridContainer.appendChild(corner); for(let i=1;i<=NUM_TASKS;i++){const h=document.createElement('div');h.className='grid-header';h.textContent=`任务 ${i}`;gridContainer.appendChild(h);} for(let s=1;s<=NUM_STUDENTS;s++){ const id=document.createElement('div');id.className='grid-student-id';id.textContent=s;gridContainer.appendChild(id); for(let t=1;t<=NUM_TASKS;t++){const key=`s${s}-t${t}`;const score=scoreData[key]===undefined?3:scoreData[key];scoreData[key]=score; const b=document.createElement('div');b.textContent=score;b.dataset.student=s;b.dataset.task=t;b.className=`score-cell score-${score}`;b.addEventListener('click',handleCellClick);gridContainer.appendChild(b);}}}
@@ -874,7 +874,7 @@
         const container = document.getElementById('page-jigsaw'); if (!container) return;
         const jigsawContainer = container.querySelector('#jigsaw-container'), modeControls = container.querySelector('#jigsaw-mode-controls'), exportBtn = container.querySelector('#jigsaw-export-btn');
         const taskInputsContainer = container.querySelector('#jigsaw-task-inputs');
-        const NUM_STUDENTS = 40, PETAL_COLORS = ['red', 'yellow', 'blue', 'green', 'purple']; let jigsawData = {}, currentPetalCount = 3, taskNames = ['任务1', '任务2', '任务3'];
+        const NUM_STUDENTS = 60, PETAL_COLORS = ['red', 'yellow', 'blue', 'green', 'purple']; let jigsawData = {}, currentPetalCount = 3, taskNames = ['任务1', '任务2', '任务3'];
 
         // 生成任务名称输入框
         function renderTaskInputs() {
@@ -885,10 +885,22 @@
                 const inputWrapper = document.createElement('div');
                 inputWrapper.className = 'flex flex-col';
 
+                const labelContainer = document.createElement('div');
+                labelContainer.className = 'flex items-center gap-2 mb-1';
+
+                // 添加颜色色块
+                const colorBlock = document.createElement('div');
+                const color = PETAL_COLORS[i-1];
+                colorBlock.className = `w-6 h-6 rounded-full petal-${color}-light border-2 border-gray-300`;
+                colorBlock.style.backgroundColor = getComputedStyle(document.documentElement)
+                    .getPropertyValue(`--petal-${color}-light`) || '';
+
                 const label = document.createElement('label');
-                label.className = 'text-sm font-bold text-gray-700 mb-1';
+                label.className = 'text-sm font-bold text-gray-700';
                 label.textContent = `花瓣${i}`;
-                inputWrapper.appendChild(label);
+
+                labelContainer.append(colorBlock, label);
+                inputWrapper.appendChild(labelContainer);
 
                 const input = document.createElement('input');
                 input.type = 'text';
@@ -1214,7 +1226,7 @@
         const container = document.getElementById('page-score');
         if (!container) return;
 
-        const STUDENT_COUNT = 40; // 可配置：默认 1～40
+        const STUDENT_COUNT = 60; // 可配置：默认 1～60
 
         const dateInput = container.querySelector('#score-date');
         const taskInput = container.querySelector('#score-task');
