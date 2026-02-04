@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日新教师工具箱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Ma+Shan+Zheng&family=ZCOOL+QingKe+HuangYou&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        html {
+            scroll-padding-top: 5rem;
+        }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f0f9ff;
+            color: #1e3a8a;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .title-font {
+            font-family: 'ZCOOL QingKe HuangYou', 'Ma Shan Zheng', cursive;
+        }
+
+        /* --- Navigation Styles --- */
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+        }
+        .nav-button.active {
+            border-bottom-color: #3b82f6;
+            color: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        /* Hide pages by default */
+        .page-content {
+            display: none;
+        }
+        .page-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Shared Styles --- */
+        .main-title { background: linear-gradient(135deg, #2c5282 0%, #3b82f6 60%, #60a5fa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* --- Existing Apps Styles (Rixin, Bubbles etc.) --- */
+        #page-rixin .bubble, #page-bubbles .bubble, #page-score .bubble { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.65) 0%, rgba(240, 248, 255, 0.4) 40%, rgba(210, 225, 245, 0.15) 75%, rgba(255, 255, 255, 0.0) 100% ); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.4); animation: rx-float-orb 10s ease-in-out infinite alternate; box-shadow: inset 1px 1px 4px rgba(255, 255, 255, 0.7), inset -1px -1px 5px rgba(190, 210, 230, 0.35), 0 0 25px rgba(210, 230, 255, 0.35), 0 7px 20px rgba(50, 70, 100, 0.1); position: relative; overflow: hidden; }
+        #page-bubbles .bubble.selected { background: radial-gradient(circle at 70% 30%, rgba(135, 206, 250, 0.8) 0%, rgba(100, 181, 246, 0.6) 40%, rgba(80, 161, 226, 0.3) 75%, rgba(135, 206, 250, 0.1) 100%); border-color: rgba(100, 181, 246, 0.8); }
+        .bubble-fill-effect { position: absolute; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 70% 30%, rgba(135, 206, 250, 0.7) 0%, rgba(100, 181, 246, 0.5) 40%, rgba(80, 161, 226, 0.3) 75%, rgba(135, 206, 250, 0.2) 100%); height: 0; transition: height 0.5s linear; z-index: 0; }
+        #page-rixin .bubble.running-indicator { border-color: #60a5fa; }
+        .bubble-content { position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .bubble-cycle-display { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: -0.1em; font-size: 0.8em; font-weight: bold; color: #1e3a8a; text-shadow: 0 0 2px white; }
+        #page-rixin .rixin-duration-button { background-color: #e0f2fe; color: #0c4a6e; transition: all 0.2s ease; }
+        #page-rixin .rixin-duration-button.active { background-color: #3b82f6; color: white; font-weight: bold; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4); }
+        @keyframes rx-float-orb { from { transform: translateY(0px); } to { transform: translateY(-8px); } }
+        
+        /* --- Page Errors Styles --- */
+        #page-errors .student-item.recorded { background-color: #d1fae5; color: #065f46; }
+        #page-errors .student-item.selected { background-color: #3b82f6; color: white; font-weight: bold; }
+        #page-errors .question-bubble { transition: all 0.2s ease-in-out; border: 2px solid #93c5fd; }
+        #page-errors .question-bubble:hover { transform: scale(1.1); background-color: #dbeafe; }
+        #page-errors .question-bubble.error { background-color: #ef4444; color: white; border-color: #ef4444; transform: scale(1.05); }
+        #page-errors .question-bubble.all-correct { background-color: #22c55e; color: white; border-color: #22c55e; transform: scale(1.05); }
+        
+        /* --- Page Tasks Styles --- */
+        #page-tasks .task-grid-wrapper { width: 100%; overflow-x: auto; max-height: 70vh; }
+        #page-tasks .task-grid-container { display: grid; grid-template-columns: min-content repeat(15, 1fr); gap: 0.5rem; padding: 0.5rem; }
+        #page-tasks .grid-header, #page-tasks .grid-student-id { display: flex; align-items: center; justify-content: center; font-weight: 600; color: #1e40af; position: sticky; background-color: #f0f9ff; z-index: 1; }
+        #page-tasks .grid-header { top: 0; z-index: 2; }
+        #page-tasks .grid-student-id { left: 0; }
+        #page-tasks .score-cell { cursor: pointer; transition: all 0.3s ease; width: 3.5rem; height: 3.5rem; border-radius: 9999px; font-size: 1.25rem; font-weight: 700; color: white; display: flex; align-items: center; justify-content: center; margin: auto; transform: scale(0.95); }
+        #page-tasks .score-cell:hover { transform: scale(1.05); filter: brightness(1.1); }
+        .score-3 { background-color: #4f46e5; } .score-2 { background-color: #38bdf8; } .score-1 { background-color: #facc15; color: #422006; } .score-0 { background-color: #e5e7eb; color: #4b5563; }
+        
+        /* --- Page Jigsaw Styles --- */
+        #page-jigsaw .mode-button.active { background-color: #4f46e5; color: white; }
+        #jigsaw-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 2rem; padding: 1rem; }
+        .jigsaw-clover { position: relative; width: 10rem; height: 10rem; margin: auto; }
+        .clover-center { position: absolute; width: 4rem; height: 4rem; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #fff; border: 3px solid #93c5fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; color: #1e3a8a; z-index: 10; box-shadow: 0 0 10px rgba(0,0,0,0.1); transition: all 0.4s ease; }
+        .clover-center.completed { background: linear-gradient(145deg, #fef08a, #facc15); border-color: #f59e0b; color: #a16207; text-shadow: 0 0 5px rgba(255,255,255,0.5); transform: translate(-50%, -50%) scale(1.1); }
+        .petal { position: absolute; width: 3.5rem; height: 3.5rem; border-radius: 50%; top: 50%; left: 50%; margin: -1.75rem; cursor: pointer; transition: all 0.3s ease; }
+        .petal:hover { transform: scale(1.1); }
+        .petal-red-light { background-color: #fee2e2; } .petal-red-dark { background-color: #dc2626; } .petal-yellow-light { background-color: #fef9c3; } .petal-yellow-dark { background-color: #eab308; } .petal-blue-light { background-color: #dbeafe; } .petal-blue-dark { background-color: #2563eb; } .petal-green-light { background-color: #dcfce7; } .petal-green-dark { background-color: #16a34a; } .petal-purple-light { background-color: #f3e8ff; } .petal-purple-dark { background-color: #9333ea; }
+        .clover-3 .p-1 { transform: translateY(-3.2rem); } .clover-3 .p-2 { transform: translateX(-2.8rem) translateY(1.6rem); } .clover-3 .p-3 { transform: translateX(2.8rem) translateY(1.6rem); }
+        .clover-4 .p-1 { transform: translateY(-3.2rem); } .clover-4 .p-2 { transform: translateX(-3.2rem); } .clover-4 .p-3 { transform: translateY(3.2rem); } .clover-4 .p-4 { transform: translateX(3.2rem); }
+        .clover-5 .p-1 { transform: translateY(-3.5rem); } .clover-5 .p-2 { transform: translateX(-3.3rem) translateY(-1.1rem); } .clover-5 .p-3 { transform: translateX(-2.05rem) translateY(2.8rem); } .clover-5 .p-4 { transform: translateX(2.05rem) translateY(2.8rem); } .clover-5 .p-5 { transform: translateX(3.3rem) translateY(-1.1rem); }
+
+        /* --- Page Heatmap Styles --- */
+        #heatmap-lectern { border: 3px solid #60a5fa; background: #e0f2fe; }
+        .heatmap-seat { width: 3.5rem; height: 3.5rem; border-radius: 9999px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; sm:font-size: 1.25rem; font-weight: 700; }
+        .heatmap-seat:hover { transform: scale(1.1); }
+        .heat-static-color { background-color: #dbeafe; color: #1e40af; }
+        .group-op-button { background-color: #e0f2fe; color: #2563eb; border: 1px solid #93c5fd; }
+        .group-total { background-color: #eff6ff; color: #1e3a8a; }
+
+        /* --- NEW: Page Lottery (Chosen One) Styles - CLEAN & FLAT (Revised) --- */
+        #page-lottery .lottery-bubble {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            /* Match Rixin Style: Glassy White Base */
+            background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.65) 0%, rgba(240, 248, 255, 0.4) 40%, rgba(210, 225, 245, 0.15) 75%, rgba(255, 255, 255, 0.0) 100% );
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: inset 1px 1px 4px rgba(255, 255, 255, 0.7), inset -1px -1px 5px rgba(190, 210, 230, 0.35), 0 0 15px rgba(210, 230, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: default;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #1e3a8a; /* Dark Blue Text */
+            font-size: 1.3rem;
+        }
+        /* Winner State - Solid Deep Blue (Like buttons/headers) */
+        #page-lottery .lottery-bubble.won {
+            background: #2563eb; /* Standard Blue-600 */
+            background: radial-gradient(circle at 30% 30%, #3b82f6 0%, #1d4ed8 100%); /* Subtle depth but mostly flat blue */
+            border-color: #60a5fa;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+            transform: scale(1.15);
+            z-index: 10;
+            color: white;
+            text-shadow: none;
+        }
+        /* Flash Animation */
+        #page-lottery .lottery-bubble.flashing {
+            animation: lottery-flash 0.15s alternate infinite;
+            background: #dbeafe; /* Light blue background during flash */
+            border-color: #60a5fa;
+        }
+        @keyframes lottery-flash {
+            from { transform: scale(1); opacity: 0.9; }
+            to { transform: scale(1.05); opacity: 1; background: #bfdbfe; }
+        }
+        .lottery-input {
+            @apply w-20 py-2 px-3 text-center border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none text-blue-800 font-bold text-lg bg-white shadow-sm transition-all;
+        }
+        
+    
+        /* --- Score Page (积分登记) --- */
+        #page-score .score-panel{
+            background: rgba(255,255,255,0.60);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.9);
+            box-shadow: 0 18px 40px rgba(20, 40, 80, 0.08);
+        }
+        #page-score .score-input{
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 2px solid rgba(147, 197, 253, 0.85);
+            border-radius: 0.75rem;
+            background: rgba(255,255,255,0.9);
+            color: #1e40af;
+            font-weight: 700;
+            outline: none;
+            transition: all 0.18s ease;
+        }
+        #page-score .score-input:focus{
+            border-color: rgba(59, 130, 246, 0.95);
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.18);
+        }
+        #page-score .score-badge{
+            padding: 0.15rem 0.55rem;
+            border-radius: 9999px;
+            background: rgba(255,255,255,0.85);
+            border: 1px solid rgba(191, 219, 254, 0.95);
+            color: #1e3a8a;
+            font-weight: 900;
+            box-shadow: 0 10px 24px rgba(20, 40, 80, 0.08);
+        }
+
+        /* 内化按钮：整块可点，不用玻璃圆按钮 */
+        #page-score .score-bubble-content{
+            display: grid;
+            grid-template-columns: 1fr 1.1fr 1fr;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            gap: 0;
+        }
+        #page-score .score-inner-btn{
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: #60a5fa;
+            font-weight: 900;
+            font-size: 1.55rem;
+            line-height: 1;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #page-score .score-inner-btn:hover{
+            background: rgba(255,255,255,0.28);
+        }
+        #page-score .score-inner-btn:active{
+            transform: scale(0.985);
+        }
+        #page-score .score-number{
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #475569;
+        }
+
+    </style>
+</head>
+<body class="p-2 sm:p-4 md:p-6 pb-24">
+
+    <nav class="bg-white/70 backdrop-blur-md shadow-sm rounded-xl p-2 mb-6 max-w-5xl mx-auto sticky top-4 z-50">
+        <div class="flex justify-around flex-wrap">
+            <button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-rixin">日新阅读</button>
+                        <button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-score">积分登记</button>
+<button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-bubbles">泡泡抢位</button>
+            <button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-lottery">天选之子</button>
+            <button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-errors">错题记录</button>
+            <button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-tasks">任务积分</button>
+            <button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-jigsaw">碎片拼图</button>
+            <button class="nav-button text-gray-600 font-bold py-2 px-3 sm:px-4 text-sm sm:text-base" data-page="page-heatmap">座位热力图</button>
+        </div>
+    </nav>
+
+    <div id="app-container">
+        <!-- Page 1: 日新阅读 -->
+        <div id="page-rixin" class="page-content">
+            <header class="text-center py-4 md:py-8">
+                <div class="flex justify-center items-center gap-3 sm:gap-4"><img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[阅读图标]" class="h-16 sm:h-20 md:h-24 filter drop-shadow-lg"><h1 class="title-font main-title text-4xl sm:text-5xl md:text-7xl font-bold">日新阅读</h1></div>
+                <p class="text-sm text-gray-500 mt-2 sm:mt-4">点击泡泡开始或暂停计时</p>
+                <div class="text-center my-4">
+                    <span class="text-sm text-gray-600 mr-3">周期时长:</span>
+                    <button data-duration="600000" class="rixin-duration-button active py-1 px-4 rounded-lg text-sm font-semibold">10分钟</button>
+                    <button data-duration="900000" class="rixin-duration-button py-1 px-4 rounded-lg text-sm font-semibold">15分钟</button>
+                    <button data-duration="1200000" class="rixin-duration-button py-1 px-4 rounded-lg text-sm font-semibold">20分钟</button>
+                </div>
+                <div class="text-center my-4">
+                    <label for="rixin-date" class="text-sm text-gray-600 mr-3">阅读日期:</label>
+                    <input type="date" id="rixin-date" class="py-1 px-3 rounded-lg text-sm border-2 border-blue-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none">
+                </div>
+            </header>
+            <main class="container mx-auto max-w-screen-xl px-1 sm:px-2"><div id="rixin-bubbles-container" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)); gap: 1rem;"></div></main>
+            <div class="fixed bottom-20 right-4 flex flex-col gap-3">
+                <button id="rixin-merge-btn" class="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">合并历史统计</button>
+                <button id="rixin-export-btn" class="bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">导出</button>
+            </div>
+            <input type="file" id="rixin-file-input" accept=".xlsx,.xls" multiple style="display: none;">
+        </div>
+
+        <!-- Page 2: 泡泡抢位 -->
+        <div id="page-bubbles" class="page-content">
+             <header class="text-center py-4 md:py-1"><div class="flex justify-center items-center gap-3 sm:gap-4"><img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[挑战图标]" class="h-16 sm:h-20 md:h-24 filter drop-shadow-lg"><h1 class="title-font main-title text-4xl sm:text-5xl md:text-6xl font-bold">泡泡抢位</h1></div></header>
+            <section class="max-w-xl mx-auto p-2 sm:p-4 rounded-xl mb-4 text-center space-y-2"><p class="text-sm text-gray-500">点击“开始全部计时”后，按学生完成顺序点击泡泡。</p><div class="flex flex-col sm:flex-row justify-center items-center gap-2"><button id="bubbles-start-btn" class="w-full sm:w-auto py-2 px-4 rounded-md text-sm sm:text-base font-medium bg-blue-600 text-white hover:bg-blue-700">开始全部计时</button><button id="bubbles-reset-btn" class="w-full sm:w-auto py-2 px-4 rounded-md text-sm sm:text-base font-medium bg-gray-500 text-white hover:bg-gray-600">全部重置</button></div></section>
+            <main class="container mx-auto max-w-screen-lg px-1 pt-4"><div id="bubbles-bubbles-container" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)); gap: 1rem;"></div></main>
+            <button id="bubbles-export-btn" class="fixed bottom-20 right-4 bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">导出</button>
+        </div>
+
+        <!-- Page 3: 天选之子 (Lottery) -->
+        <div id="page-lottery" class="page-content">
+            <header class="text-center py-4">
+                <div class="flex justify-center items-center gap-3 sm:gap-4">
+                    <img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[抽奖图标]" class="h-16 sm:h-20 md:h-24 filter drop-shadow-lg">
+                    <h1 class="title-font main-title text-4xl sm:text-5xl md:text-6xl font-bold">天选之子</h1>
+                </div>
+            </header>
+            
+            <!-- Controls - Updated Layout -->
+            <div class="max-w-4xl mx-auto bg-white/60 backdrop-blur-md rounded-2xl p-4 mb-6 shadow-sm border border-white flex flex-wrap items-center justify-center gap-4 sm:gap-8">
+                <!-- Total Students Input -->
+                <div class="flex items-center gap-3">
+                    <label for="lottery-total-count" class="text-gray-700 font-bold text-base whitespace-nowrap">总人数:</label>
+                    <input type="number" id="lottery-total-count" value="40" min="1" max="100" class="lottery-input h-10">
+                </div>
+
+                <!-- Draw Count Input -->
+                <div class="flex items-center gap-3">
+                    <label for="lottery-draw-count" class="text-gray-700 font-bold text-base whitespace-nowrap">抽取:</label>
+                    <input type="number" id="lottery-draw-count" value="5" min="1" max="20" class="lottery-input h-10">
+                    <span class="text-gray-500 font-bold text-sm">人</span>
+                </div>
+
+                <!-- Divider -->
+                <div class="hidden sm:block w-px h-8 bg-blue-200 mx-2"></div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3">
+                    <button id="lottery-start-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">开始抽奖</button>
+                    <button id="lottery-reset-btn" class="bg-white text-red-500 border border-red-200 font-bold py-2 px-4 rounded-lg shadow-sm hover:bg-red-50 transition-colors whitespace-nowrap">重置</button>
+                </div>
+            </div>
+            
+            <div class="text-center text-sm text-gray-500 mb-4 font-medium">
+                已中奖: <span id="lottery-winner-count" class="text-blue-600 font-bold">0</span> 人 | 
+                剩余候选: <span id="lottery-pool-count" class="text-green-600 font-bold">0</span> 人
+            </div>
+
+            <main class="container mx-auto max-w-screen-xl px-1 sm:px-2">
+                <div id="lottery-grid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)); gap: 1rem;">
+                    <!-- JS Generated Bubbles -->
+                </div>
+            </main>
+        </div>
+        
+        <!-- Page 4: 错题记录 -->
+        <div id="page-errors" class="page-content">
+            <header class="text-center mb-6"><div class="flex justify-center items-center gap-3 sm:gap-4"><img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[装饰图标]" class="h-16 sm:h-20 md:h-24"><h1 class="title-font main-title text-4xl sm:text-5xl md:text-6xl font-bold">错题记录</h1></div><p id="errors-current-student-indicator" class="mt-2 text-base sm:text-lg text-gray-600">请从左侧选择一个学生开始记录</p></header>
+            <div class="flex flex-col md:flex-row gap-4 md:gap-6 max-w-7xl mx-auto"><aside class="w-full md:w-2/5 bg-white p-3 sm:p-4 rounded-xl shadow-md"><h2 class="text-lg sm:text-xl font-semibold text-center mb-4 border-b pb-2 text-blue-800">学生列表</h2><div id="errors-student-list" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2"></div></aside><main class="w-full md:w-3/5 bg-white p-3 sm:p-4 rounded-xl shadow-md"><h2 class="text-lg sm:text-xl font-semibold text-center mb-4 border-b pb-2 text-blue-800">题目列表 (点击标记错题)</h2><div id="errors-question-bubbles" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3"></div></main></div>
+            <footer class="text-center mt-6"><button id="errors-export-btn" class="bg-blue-600 text-white font-bold py-2 px-6 sm:py-3 sm:px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300">导出统计结果</button></footer>
+        </div>
+
+        <!-- Page 5: 任务积分 -->
+        <div id="page-tasks" class="page-content">
+            <header class="text-center py-4 md:py-8"><div class="flex justify-center items-center gap-3 sm:gap-4"><img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[任务图标]" class="h-16 sm:h-20 md:h-24 filter drop-shadow-lg"><h1 class="title-font main-title text-4xl sm:text-5xl md:text-7xl font-bold">任务积分</h1></div><div class="text-center my-4"><button id="tasks-mode-toggle-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-all">当前为：减分模式</button></div></header>
+            <main class="container mx-auto max-w-screen-xl px-2 sm:px-4"><div class="task-grid-wrapper"><div id="tasks-grid-container" class="task-grid-container"></div></div></main>
+            <button id="tasks-export-btn" class="fixed bottom-20 right-4 bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">导出数据</button>
+        </div>
+
+        <!-- Page 6: 碎片拼图 -->
+        <div id="page-jigsaw" class="page-content">
+            <header class="text-center py-4 md:py-8"><div class="flex justify-center items-center gap-3 sm:gap-4"><img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[拼图图标]" class="h-16 sm:h-20 md:h-24 filter drop-shadow-lg"><h1 class="title-font main-title text-4xl sm:text-5xl md:text-7xl font-bold">碎片拼图</h1></div><div id="jigsaw-mode-controls" class="flex justify-center items-center gap-4 my-4"><button data-petals="3" class="mode-button bg-blue-200 hover:bg-blue-300 text-blue-800 font-bold py-2 px-4 rounded-lg transition-all">3花瓣</button><button data-petals="4" class="mode-button bg-blue-200 hover:bg-blue-300 text-blue-800 font-bold py-2 px-4 rounded-lg transition-all">4花瓣</button><button data-petals="5" class="mode-button bg-blue-200 hover:bg-blue-300 text-blue-800 font-bold py-2 px-4 rounded-lg transition-all">5花瓣</button></div></header>
+
+            <!-- 任务名称输入区域 -->
+            <section class="max-w-4xl mx-auto mb-6 px-4">
+                <div id="jigsaw-task-names" class="bg-white/70 backdrop-blur-md rounded-xl p-4 shadow-md">
+                    <h3 class="text-lg font-bold text-blue-800 mb-3 text-center">花瓣任务名称</h3>
+                    <div id="jigsaw-task-inputs" class="grid grid-cols-3 gap-3">
+                        <!-- 动态生成输入框 -->
+                    </div>
+                </div>
+            </section>
+
+            <main><div id="jigsaw-container"></div></main>
+            <button id="jigsaw-export-btn" class="fixed bottom-20 right-4 bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">导出</button>
+        </div>
+
+        <!-- Page 7: 座位热力图 -->
+        <div id="page-heatmap" class="page-content">
+            <header class="text-center pt-4 pb-2">
+                <div class="flex justify-center items-center gap-3 sm:gap-4">
+                    <img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[热力图图标]" class="h-16 sm:h-20 md:h-24 filter drop-shadow-lg">
+                    <h1 class="title-font main-title text-4xl sm:text-5xl md:text-7xl font-bold">座位热力图</h1>
+                </div>
+            </header>
+            <main class="container mx-auto max-w-4xl mt-4">
+                <div class="flex justify-center items-center space-x-2 sm:space-x-8">
+                    <div id="heatmap-special-seat-left"></div>
+                    <div id="heatmap-lectern" class="w-2/5 sm:w-1/3 text-center py-2 rounded-lg font-bold text-lg text-blue-800 shadow-md">讲台</div>
+                    <div id="heatmap-special-seat-right"></div>
+                </div>
+                <div class="text-center my-4">
+                    <button id="heatmap-mode-toggle-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-all">当前为：加分模式</button>
+                </div>
+                <div id="heatmap-main-seats" class="flex flex-col lg:flex-row justify-around items-center lg:items-start space-y-4 lg:space-y-0 lg:space-x-4">
+                    <!-- Main seat groups will be rendered here by JS -->
+                </div>
+            </main>
+            <button id="heatmap-export-btn" class="fixed bottom-20 right-4 bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">导出热力图</button>
+        </div>
+    
+        <!-- ==================== 积分登记 ==================== -->
+        <div id="page-score" class="page-content">
+            <header class="text-center py-4 md:py-8">
+                <div class="flex justify-center items-center gap-3 sm:gap-4">
+                    <img src="https://i.postimg.cc/8zGQV1bn/Lion-and-Sprite-with-Transparent-Background.png" alt="[积分图标]" class="h-16 sm:h-20 md:h-24 filter drop-shadow-lg">
+                    <h1 class="title-font main-title text-4xl sm:text-5xl md:text-7xl font-bold">积分登记</h1>
+                </div>
+                </header>
+
+            <section class="max-w-5xl mx-auto score-panel rounded-2xl p-4 sm:p-6 border border-white">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label for="score-date" class="block text-sm font-bold text-gray-700 mb-1">日期</label>
+                        <input type="date" id="score-date" class="score-input">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">默认分</label>
+                        <div class="flex items-center justify-center gap-3">
+                            <button id="score-default-minus" type="button" class="w-10 h-10 rounded-xl bg-white/80 border border-blue-200 text-blue-700 font-extrabold shadow-sm hover:bg-blue-50 active:scale-95 transition">-</button>
+                            <div id="score-default-value" class="w-14 text-center text-3xl font-extrabold text-blue-700">3</div>
+                            <button id="score-default-plus" type="button" class="w-10 h-10 rounded-xl bg-white/80 border border-blue-200 text-blue-700 font-extrabold shadow-sm hover:bg-blue-50 active:scale-95 transition">+</button>
+                        </div>
+                        </div>
+
+                    <div>
+                        <label for="score-task" class="block text-sm font-bold text-gray-700 mb-1">任务</label>
+                        <input type="text" id="score-task" placeholder="请输入任务名称（必填）" class="score-input">
+                    </div>
+                </div>
+            </section>
+
+            <main class="container mx-auto max-w-screen-xl px-1 sm:px-2 mt-6">
+                <div id="score-bubbles-container" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr)); gap: 1.1rem;"></div>
+            </main>
+
+            <div class="fixed bottom-20 right-4 flex flex-col gap-3">
+                <button id="score-merge-btn" class="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">合并历史统计</button>
+                <button id="score-export-btn" class="bg-gradient-to-br from-sky-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">导出 Excel</button>
+            </div>
+
+            <!-- 隐藏的文件选择器 -->
+            <input type="file" id="score-file-input" accept=".xlsx,.xls" multiple style="display: none;">
+        </div>
+
+    </div>
+
+    <footer class="text-center py-1 text-gray-500 text-sm sm:text-base fixed bottom-0 left-0 right-0 bg-white/60 backdrop-blur-sm z-50">
+        <p>版权所有：福州市鼓楼第一中心小学</p>
+    </footer>
+    
+    <script>
+    // --- Main Navigation ---
+    (function() {
+        const navButtons = document.querySelectorAll('.nav-button');
+        const pages = document.querySelectorAll('.page-content');
+        function switchPage(pageId) {
+            pages.forEach(page => page.classList.toggle('active', page.id === pageId));
+            navButtons.forEach(button => button.classList.toggle('active', button.dataset.page === pageId));
+            document.querySelectorAll('[id$="-export-btn"].fixed').forEach(btn => {
+                 btn.classList.add('hidden');
+            });
+            const activeExportBtn = document.getElementById(pageId.replace('page-','') + '-export-btn');
+            if (activeExportBtn && activeExportBtn.classList.contains('fixed')) {
+                activeExportBtn.classList.remove('hidden');
+            }
+        }
+        navButtons.forEach(button => button.addEventListener('click', () => switchPage(button.dataset.page)));
+        const firstNavButton = navButtons[0];
+        if (firstNavButton) switchPage(firstNavButton.dataset.page);
+    })();
+    
+    // --- App 1: 日新阅读 ---
+    (function() {
+        const container = document.getElementById('page-rixin'); if (!container) return;
+        let timers = [];
+        const TOTAL_BUBBLES = 40;
+        let cycleDurationMs = 600000;
+
+        const bubblesContainer = container.querySelector('#rixin-bubbles-container'),
+            exportBtn = container.querySelector('#rixin-export-btn'),
+            durationControls = container.querySelector('.text-center.my-4');
+
+        function formatTime(ms) { const s = Math.floor(ms / 1000); return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+        
+        function refreshAllDisplays() {
+            timers.forEach(timer => {
+                const currentElapsed = timer.isRunning ? (Date.now() - timer.startTime) : timer.elapsed;
+                const cycleCount = Math.floor(currentElapsed / cycleDurationMs);
+                const elapsedInCycle = currentElapsed % cycleDurationMs;
+                timer.fillElement.style.height = `${(elapsedInCycle / cycleDurationMs) * 100}%`;
+                timer.cycleElement.textContent = cycleCount > 0 ? `+${cycleCount}` : '';
+            });
+        }
+
+        function updateTimerDisplay(timer) { 
+            if (timer.isRunning) { 
+                timer.elapsed = Date.now() - timer.startTime; 
+                const cycleCount = Math.floor(timer.elapsed / cycleDurationMs); 
+                const elapsedInCycle = timer.elapsed % cycleDurationMs; 
+                timer.fillElement.style.height = `${(elapsedInCycle / cycleDurationMs) * 100}%`; 
+                timer.cycleElement.textContent = cycleCount > 0 ? `+${cycleCount}` : ''; 
+                timer.timeElement.textContent = formatTime(timer.elapsed); 
+                timer.intervalId = requestAnimationFrame(() => updateTimerDisplay(timer)); 
+            } 
+        }
+
+        function handleTimerToggle(timer) { 
+            timer.isRunning = !timer.isRunning; 
+            if (timer.isRunning) { 
+                timer.element.classList.add('running-indicator'); 
+                timer.startTime = Date.now() - timer.elapsed; 
+                updateTimerDisplay(timer); 
+            } else { 
+                timer.element.classList.remove('running-indicator'); 
+                if (timer.intervalId) cancelAnimationFrame(timer.intervalId); 
+            } 
+        }
+        
+        function initBubbles() { 
+            if(!bubblesContainer) return; 
+            bubblesContainer.innerHTML = ''; 
+            timers.forEach(t => { if(t.intervalId) cancelAnimationFrame(t.intervalId) }); 
+            timers = Array.from({ length: TOTAL_BUBBLES }, (_, i) => ({ id: i + 1, startTime: 0, elapsed: 0, isRunning: false, element: null, fillElement: null, cycleElement: null, timeElement: null, intervalId: null })); 
+            timers.forEach(timer => { 
+                const bubbleEl = document.createElement('div'); 
+                bubbleEl.className = 'bubble aspect-square rounded-full cursor-pointer p-0.5'; 
+                bubbleEl.dataset.timerId = timer.id; 
+                const fillEl = document.createElement('div'); 
+                fillEl.className = 'bubble-fill-effect'; 
+                const contentEl = document.createElement('div'); 
+                contentEl.className = 'bubble-content'; 
+                const numberWrapper = document.createElement('div'); 
+                numberWrapper.className = 'relative'; 
+                const cycleEl = document.createElement('span'); 
+                cycleEl.className = 'bubble-cycle-display'; 
+                const numberEl = document.createElement('div'); 
+                numberEl.className = 'bubble-number text-lg sm:text-xl font-bold'; 
+                numberEl.textContent = timer.id; 
+                const timeEl = document.createElement('span'); 
+                timeEl.className = 'bubble-time block text-[0.6rem] sm:text-xs font-medium mt-0.5'; 
+                timeEl.textContent = formatTime(timer.elapsed); 
+                numberWrapper.append(cycleEl, numberEl); 
+                contentEl.append(numberWrapper, timeEl); 
+                bubbleEl.append(fillEl, contentEl); 
+                bubbleEl.addEventListener('click', () => handleTimerToggle(timer)); 
+                timer.element = bubbleEl; 
+                timer.fillElement = fillEl; 
+                timer.cycleElement = cycleEl; 
+                timer.timeElement = timeEl; 
+                bubblesContainer.appendChild(bubbleEl); 
+            }); 
+        }
+        
+        if(exportBtn) exportBtn.addEventListener('click', () => {
+            const dateInput = container.querySelector('#rixin-date');
+            const dateStr = (dateInput?.value || '').trim();
+
+            if (!dateStr) {
+                alert('请先选择阅读日期后再导出。');
+                return;
+            }
+
+            // 时长转换为分钟函数
+            function timeToMinutes(ms) {
+                const totalSeconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                return minutes;
+            }
+
+            const headerName = `${dateStr}日新阅读`;
+            const rows = [['学号', headerName]];
+
+            timers.forEach(t => {
+                const elapsed = t.isRunning ? Date.now() - t.startTime : t.elapsed;
+                const minutes = timeToMinutes(elapsed);
+                rows.push([t.id, minutes]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "阅读记录");
+            XLSX.writeFile(wb, `${headerName}.xlsx`);
+        });
+
+        if(durationControls) {
+            durationControls.addEventListener('click', (e) => {
+                if (e.target.matches('.rixin-duration-button')) {
+                    const newDuration = parseInt(e.target.dataset.duration, 10);
+                    if (newDuration !== cycleDurationMs) {
+                        cycleDurationMs = newDuration;
+                        durationControls.querySelectorAll('.rixin-duration-button').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        refreshAllDisplays();
+                    }
+                }
+            });
+        }
+
+        // 初始化日期为今天
+        const dateInput = container.querySelector('#rixin-date');
+        if (dateInput) {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${y}-${m}-${d}`;
+        }
+
+        // 合并历史统计功能
+        const mergeBtn = container.querySelector('#rixin-merge-btn');
+        if(mergeBtn) mergeBtn.addEventListener('click', async () => {
+            const fileInput = container.querySelector('#rixin-file-input');
+            if (!fileInput) {
+                alert('文件选择器未找到，请刷新页面重试。');
+                return;
+            }
+
+            fileInput.value = '';
+            fileInput.click();
+
+            fileInput.onchange = async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+
+                if (typeof XLSX === 'undefined') {
+                    alert('Excel组件未加载，请检查网络连接。');
+                    return;
+                }
+
+                try {
+                    // 读取所有Excel文件
+                    const allData = [];
+
+                    for (const file of files) {
+                        const data = await readExcelFile(file);
+                        allData.push(...data);
+                    }
+
+                    if (allData.length === 0) {
+                        alert('未找到有效数据，请检查Excel文件格式。');
+                        return;
+                    }
+
+                    // 按学号和日期分组统计
+                    const studentStats = {};
+
+                    allData.forEach(row => {
+                        const values = Object.values(row);
+                        if (values.length < 2) return; // 至少需要2列
+
+                        const studentId = values[0]; // 第一列：学号
+                        const minutes = parseInt(values[1]) || 0; // 第二列：时长（分钟）
+
+                        // 获取列名作为日期标识
+                        const keys = Object.keys(row);
+                        const dateName = keys[1]; // 第二列的列名就是日期（如"2026-1-6日新阅读"）
+
+                        if (!studentStats[studentId]) {
+                            studentStats[studentId] = {
+                                '学号': studentId,
+                                '总阅读时长': 0,
+                                '阅读记录': {}
+                            };
+                        }
+
+                        studentStats[studentId]['总阅读时长'] += minutes;
+                        studentStats[studentId]['阅读记录'][dateName] = minutes;
+                    });
+
+                    // 收集所有日期名称
+                    const allDates = new Set();
+                    Object.values(studentStats).forEach(student => {
+                        Object.keys(student['阅读记录']).forEach(date => {
+                            allDates.add(date);
+                        });
+                    });
+                    const sortedDates = Array.from(allDates).sort();
+
+                    // 转换为数组并计算排名
+                    const studentsArray = Object.values(studentStats);
+                    studentsArray.sort((a, b) => b['总阅读时长'] - a['总阅读时长']);
+
+                    studentsArray.forEach((student, index) => {
+                        student['排名'] = index + 1;
+                    });
+
+                    // 构建Excel数据：学号、日期1、日期2、...、总阅读时长、排名
+                    const rows = [['学号', ...sortedDates, '总阅读时长', '排名']];
+
+                    studentsArray.forEach(student => {
+                        const row = [student['学号']];
+                        sortedDates.forEach(date => {
+                            row.push(student['阅读记录'][date] || 0);
+                        });
+                        row.push(student['总阅读时长']);
+                        row.push(student['排名']);
+                        rows.push(row);
+                    });
+
+                    // 导出Excel
+                    const ws = XLSX.utils.aoa_to_sheet(rows);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, '阅读统计');
+
+                    const filename = `日新阅读统计汇总_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                    XLSX.writeFile(wb, filename);
+
+                    alert(`成功！已合并 ${files.length} 个文件，统计 ${studentsArray.length} 名学生。`);
+
+                } catch (error) {
+                    console.error('合并统计失败:', error);
+                    alert('合并统计失败：' + error.message);
+                }
+            };
+        });
+
+        // 读取Excel文件函数
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        resolve(jsonData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('文件读取失败'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        initBubbles();
+    })();
+    
+    // --- App 2: 泡泡抢位 ---
+    (function() {
+        const container = document.getElementById('page-bubbles'); if (!container) return;
+        const TOTAL_BUBBLES = 40; let allBubblesData = [], selectedBubbleIdsInOrder = [], gameActive = false, animationFrameId = null;
+        const bubblesContainer = container.querySelector('#bubbles-bubbles-container'), startBtn = container.querySelector('#bubbles-start-btn'), resetBtn = container.querySelector('#bubbles-reset-btn'), exportBtn = container.querySelector('#bubbles-export-btn');
+        function formatTime(ms) { const s = Math.floor(ms / 1000); return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+        const numberToChineseOrdinal = (num) => { const N = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]; if (num <= 10) return `第${N[num]}`; if (num < 20) return `第十${N[num % 10] || ''}`; const ten = Math.floor(num/10), one = num % 10; return `第${N[ten]}十${one > 0 ? N[one] : ''}`; };
+        function renderBubbles() { if(!bubblesContainer) return; bubblesContainer.innerHTML = ''; allBubblesData.forEach(bubbleObj => { let el = bubbleObj.element; if (!el) { el = document.createElement('div'); el.className = 'bubble aspect-square rounded-full cursor-pointer flex flex-col items-center justify-center text-center p-0.5'; el.dataset.id = bubbleObj.id; el.addEventListener('click', () => onBubbleClick(bubbleObj)); bubbleObj.element = el; } else { el.innerHTML = ''; } const numberEl = document.createElement('div'); numberEl.className = 'bubble-number text-lg sm:text-xl font-bold'; numberEl.textContent = bubbleObj.id; const timeEl = document.createElement('span'); timeEl.className = 'bubble-time block text-[0.6rem] sm:text-xs font-medium mt-0.5'; if (bubbleObj.selected) { const timeText = formatTime(bubbleObj.elapsed); timeEl.innerHTML = `${numberToChineseOrdinal(bubbleObj.selectionOrder)}<br>(${timeText})`; } else { timeEl.textContent = gameActive ? '计时中' : '未开始'; } el.append(numberEl, timeEl); el.classList.toggle('selected', bubbleObj.selected); bubblesContainer.appendChild(bubbleObj.element); }); }
+        function onBubbleClick(bubbleObj) { if (!gameActive) return; bubbleObj.selected = !bubbleObj.selected; if (bubbleObj.selected) { bubbleObj.isRunning = false; bubbleObj.elapsed = Date.now() - bubbleObj.startTime; selectedBubbleIdsInOrder.push(bubbleObj.id); } else { const index = selectedBubbleIdsInOrder.indexOf(bubbleObj.id); if(index > -1) selectedBubbleIdsInOrder.splice(index, 1); bubbleObj.isRunning = true; bubbleObj.startTime = Date.now() - bubbleObj.elapsed; } selectedBubbleIdsInOrder.sort((a,b) => { const bubbleA = allBubblesData.find(bub => bub.id === a), bubbleB = allBubblesData.find(bub => bub.id === b); return bubbleA.elapsed - bubbleB.elapsed; }); selectedBubbleIdsInOrder.forEach((id, idx) => { const bubble = allBubblesData.find(b => b.id === id); if (bubble) bubble.selectionOrder = idx + 1; }); allBubblesData.forEach(bubble => { if (!selectedBubbleIdsInOrder.includes(bubble.id)) bubble.selectionOrder = null; }); renderBubbles(); }
+        function updateTimersLoop() { if(!gameActive) return; allBubblesData.forEach(bubble => { if (bubble.isRunning && !bubble.selected) { const elapsed = Date.now() - bubble.startTime, timeText = formatTime(elapsed), timeEl = bubble.element.querySelector('.bubble-time'); if (timeEl) timeEl.textContent = timeText; } }); animationFrameId = requestAnimationFrame(updateTimersLoop); }
+        function initBubbles() { if(animationFrameId) cancelAnimationFrame(animationFrameId); animationFrameId = null; allBubblesData = []; for (let i = 1; i <= TOTAL_BUBBLES; i++) allBubblesData.push({ id: i, selected: false, elapsed: 0, startTime: 0, selectionOrder: null, isRunning: false, element: null }); selectedBubbleIdsInOrder = []; gameActive = false; if(startBtn) { startBtn.disabled = false; startBtn.textContent = '开始全部计时'; } renderBubbles(); }
+        if(startBtn) startBtn.addEventListener('click', () => { if (gameActive) return; gameActive = true; startBtn.disabled = true; startBtn.textContent = '计时中...'; allBubblesData.forEach(b => { if(!b.selected) { b.isRunning = true; b.startTime = Date.now(); } }); renderBubbles(); updateTimersLoop(); });
+        if(resetBtn) resetBtn.addEventListener('click', initBubbles);
+        if(exportBtn) exportBtn.addEventListener('click', () => { const data = allBubblesData.map(b => { if(b.isRunning && !b.selected) b.elapsed = Date.now() - b.startTime; return { "号数": b.id, "状态": b.selected ? `${numberToChineseOrdinal(b.selectionOrder)} 完成` : "未完成", "用时": b.selected ? formatTime(b.elapsed) : "N/A" }; }).sort((a,b) => { const aData = allBubblesData.find(d => d.id === a.号数), bData = allBubblesData.find(d => d.id === b.号数); if(aData.selected && !bData.selected) return -1; if(!aData.selected && bData.selected) return 1; if(aData.selected && bData.selected) return aData.selectionOrder - bData.selectionOrder; return aData.id - bData.id; }); const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "抢位记录"); XLSX.writeFile(wb, `泡泡抢位记录_${new Date().toISOString().slice(0,10)}.xlsx`); });
+        initBubbles();
+    })();
+
+    // --- App 3: 天选之子 (Lottery) ---
+    (function() {
+        const container = document.getElementById('page-lottery'); if(!container) return;
+        const grid = container.querySelector('#lottery-grid'),
+              totalInput = container.querySelector('#lottery-total-count'),
+              drawInput = container.querySelector('#lottery-draw-count'),
+              startBtn = container.querySelector('#lottery-start-btn'),
+              resetBtn = container.querySelector('#lottery-reset-btn'),
+              winnerCountEl = container.querySelector('#lottery-winner-count'),
+              poolCountEl = container.querySelector('#lottery-pool-count');
+
+        let totalStudents = 40;
+        let drawCount = 5; // Default 5
+        let winners = new Set();
+
+        function renderGrid() {
+            grid.innerHTML = '';
+            totalStudents = parseInt(totalInput.value) || 40;
+            
+            for(let i=1; i<=totalStudents; i++) {
+                const bubble = document.createElement('div');
+                const isWon = winners.has(i);
+                bubble.className = `lottery-bubble ${isWon ? 'won' : ''}`;
+                bubble.textContent = i;
+                bubble.id = `lottery-b-${i}`;
+                // Keep generic float animation from Rixin styles (already in CSS as rx-float-orb)
+                bubble.style.animation = `rx-float-orb 8s ease-in-out ${-Math.random()*5}s infinite alternate`;
+                grid.appendChild(bubble);
+            }
+            updateStats();
+        }
+
+        function updateStats() {
+            winnerCountEl.textContent = winners.size;
+            poolCountEl.textContent = totalStudents - winners.size;
+            
+            if(winners.size >= totalStudents) {
+                startBtn.disabled = true;
+                startBtn.textContent = "全部抽完";
+            } else {
+                startBtn.disabled = false;
+                startBtn.textContent = `开始抽奖`;
+            }
+        }
+
+        totalInput.addEventListener('change', () => {
+            winners.clear();
+            renderGrid();
+        });
+        
+        // Listen to draw count input
+        drawInput.addEventListener('change', () => {
+            drawCount = parseInt(drawInput.value) || 1;
+            if(drawCount < 1) drawCount = 1;
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if(confirm("确定重置所有抽奖记录吗？")) {
+                winners.clear();
+                renderGrid();
+            }
+        });
+
+        startBtn.addEventListener('click', async () => {
+            // Update draw count from input right before drawing
+            drawCount = parseInt(drawInput.value) || 1;
+
+            const available = [];
+            for(let i=1; i<=totalStudents; i++) {
+                if(!winners.has(i)) available.push(i);
+            }
+
+            if(available.length === 0) return alert("无人可抽！");
+
+            startBtn.disabled = true;
+            startBtn.textContent = "🎲 抽奖中...";
+            
+            // 1. All flash animation (All available bubbles)
+            const bubbles = document.querySelectorAll('#page-lottery .lottery-bubble:not(.won)');
+            bubbles.forEach(b => b.classList.add('flashing'));
+
+            // 2. Wait
+            await new Promise(r => setTimeout(r, 1500));
+
+            // 3. Stop flash
+            bubbles.forEach(b => b.classList.remove('flashing'));
+
+            // 4. Pick winners
+            const count = Math.min(drawCount, available.length);
+            const roundWinners = [];
+            
+            // Shuffle
+            for (let i = available.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [available[i], available[j]] = [available[j], available[i]];
+            }
+            
+            for(let i=0; i<count; i++) {
+                roundWinners.push(available[i]);
+                winners.add(available[i]);
+            }
+
+            // 5. Highlight
+            roundWinners.forEach(id => {
+                const el = document.getElementById(`lottery-b-${id}`);
+                if(el) {
+                    el.classList.add('won');
+                    // Pop effect
+                    el.animate([
+                        { transform: 'scale(1)' },
+                        { transform: 'scale(1.3)' },
+                        { transform: 'scale(1.15)' }
+                    ], { duration: 400, fill: 'forwards' });
+                }
+            });
+
+            updateStats();
+        });
+
+        // Init
+        renderGrid();
+    })();
+    
+    // --- App 4: 错题记录 ---
+    (function() {
+        const container = document.getElementById('page-errors'); if (!container) return;
+        const studentListContainer = container.querySelector('#errors-student-list'), questionBubblesContainer = container.querySelector('#errors-question-bubbles'), exportBtn = container.querySelector('#errors-export-btn'), currentStudentIndicator = container.querySelector('#errors-current-student-indicator');
+        const NUM_STUDENTS = 40, NUM_QUESTIONS = 25; let studentData = {}, currentStudentId = null;
+        function loadStudentErrors() { if (!currentStudentId) return; const errors = studentData[currentStudentId] || []; document.querySelectorAll('#page-errors .question-bubble').forEach(bubble => { const qId = parseInt(bubble.dataset.questionId); bubble.classList.remove('error', 'all-correct'); if (errors.includes(qId)) bubble.classList.add(qId === 0 ? 'all-correct' : 'error'); }); }
+        function selectStudent(studentId) { if (currentStudentId) document.querySelector(`#page-errors .student-item[data-student-id='${currentStudentId}']`)?.classList.remove('selected'); document.querySelector(`#page-errors .student-item[data-student-id='${studentId}']`)?.classList.add('selected'); currentStudentId = studentId; if(currentStudentIndicator) currentStudentIndicator.textContent = `正在为 ${currentStudentId}号 学生记录错题`; loadStudentErrors(); }
+        function toggleQuestionError(questionId) { if (!currentStudentId) { alert('请先选择学生'); return; } let errors = studentData[currentStudentId]; const index = errors.indexOf(questionId); if (questionId === 0) { errors = index > -1 ? [] : [0]; } else { if (errors.includes(0)) errors = []; if (index > -1) errors.splice(index, 1); else errors.push(questionId); } studentData[currentStudentId] = errors; loadStudentErrors(); const studentEl = document.querySelector(`#page-errors .student-item[data-student-id='${currentStudentId}']`); if (studentEl) studentEl.classList.toggle('recorded', errors.length > 0); }
+        function initialize() { if(!studentListContainer || !questionBubblesContainer) return; studentListContainer.innerHTML = ''; for (let i = 1; i <= NUM_STUDENTS; i++) { const studentItem = document.createElement('div'); studentItem.textContent = `${i}号`; studentItem.dataset.studentId = i; studentItem.className = 'student-item p-2 text-center rounded-md cursor-pointer transition-colors text-sm sm:text-base'; studentItem.addEventListener('click', () => selectStudent(i)); studentListContainer.appendChild(studentItem); studentData[i] = []; } questionBubblesContainer.innerHTML = ''; for (let i = 0; i <= NUM_QUESTIONS; i++) { const bubble = document.createElement('div'); bubble.textContent = i === 0 ? '全对' : i; bubble.dataset.questionId = i; bubble.className = `question-bubble flex items-center justify-center h-12 w-12 sm:h-14 sm:w-14 text-xl sm:text-2xl font-bold rounded-full cursor-pointer ${i === 0 ? 'text-sm sm:text-base' : ''}`; bubble.addEventListener('click', () => toggleQuestionError(i)); questionBubblesContainer.appendChild(bubble); } }
+        if(exportBtn) exportBtn.addEventListener('click', () => { let csvContent = "data:text/csv;charset=utf-8,"; const headers = ['学生号', ...Array.from({length: NUM_QUESTIONS + 1}, (_, i) => i === 0 ? '全对' : `第${i}题`), '错题总计']; csvContent += headers.join(',') + '\r\n'; const columnTotals = Array(NUM_QUESTIONS + 1).fill(0); for (let sId = 1; sId <= NUM_STUDENTS; sId++) { const errors = studentData[sId] || []; const row = [sId]; let rowTotal = 0; for(let qId=0; qId <= NUM_QUESTIONS; qId++) { if(errors.includes(qId)) { row.push('1'); columnTotals[qId]++; if (qId !== 0) rowTotal++; } else { row.push(''); } } row.push(errors.includes(0) ? '0' : rowTotal); csvContent += row.join(',') + '\r\n'; } const totalRow = ['各题错误总计', ...columnTotals, columnTotals.slice(1).reduce((a, b) => a + b, 0)]; csvContent += totalRow.join(',') + '\r\n'; const link = document.createElement("a"); link.href = encodeURI(csvContent); link.download = `学生错题统计_${new Date().toISOString().slice(0, 10)}.csv`; link.click(); });
+        initialize();
+    })();
+    
+    // --- App 5: 任务积分 ---
+    (function() {
+        const container = document.getElementById('page-tasks'); if (!container) return;
+        const gridContainer = container.querySelector('#tasks-grid-container'), exportBtn = container.querySelector('#tasks-export-btn'), modeToggleBtn = container.querySelector('#tasks-mode-toggle-btn');
+        const NUM_STUDENTS = 40, NUM_TASKS = 15; let scoreData = {}, isDecrementMode = true;
+        function handleCellClick(e) { const cell=e.target,s=cell.dataset.student,t=cell.dataset.task,key=`s${s}-t${t}`; let score=scoreData[key]; if(isDecrementMode){score--;if(score<0)score=0;}else{score++;if(score>3)score=3;} scoreData[key]=score; cell.textContent=score; cell.className='score-cell'; cell.classList.add(`score-${score}`); }
+        function toggleMode() { isDecrementMode=!isDecrementMode; if(isDecrementMode){modeToggleBtn.textContent='当前为：减分模式';modeToggleBtn.classList.remove('bg-green-500','hover:bg-green-600');modeToggleBtn.classList.add('bg-blue-500','hover:bg-blue-600');}else{modeToggleBtn.textContent='当前为：加分模式';modeToggleBtn.classList.remove('bg-blue-500','hover:bg-blue-600');modeToggleBtn.classList.add('bg-green-500','hover:bg-green-600');} }
+        function initializeGrid() { if(!gridContainer) return; gridContainer.innerHTML=''; const corner=document.createElement('div'); corner.className='grid-header grid-student-id'; corner.textContent='学号'; gridContainer.appendChild(corner); for(let i=1;i<=NUM_TASKS;i++){const h=document.createElement('div');h.className='grid-header';h.textContent=`任务 ${i}`;gridContainer.appendChild(h);} for(let s=1;s<=NUM_STUDENTS;s++){ const id=document.createElement('div');id.className='grid-student-id';id.textContent=s;gridContainer.appendChild(id); for(let t=1;t<=NUM_TASKS;t++){const key=`s${s}-t${t}`;const score=scoreData[key]===undefined?3:scoreData[key];scoreData[key]=score; const b=document.createElement('div');b.textContent=score;b.dataset.student=s;b.dataset.task=t;b.className=`score-cell score-${score}`;b.addEventListener('click',handleCellClick);gridContainer.appendChild(b);}}}
+        if(exportBtn) exportBtn.addEventListener('click',()=>{ const data=[]; const header=['学号']; for(let i=1;i<=NUM_TASKS;i++)header.push(`任务 ${i}`); header.push('总分'); data.push(header); for(let s=1;s<=NUM_STUDENTS;s++){const row=[s];let total=0; for(let t=1;t<=NUM_TASKS;t++){const key=`s${s}-t${t}`;const score=scoreData[key]!==undefined?scoreData[key]:3; row.push(score);total+=score;} row.push(total); data.push(row);} const ws=XLSX.utils.aoa_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"任务积分记录"); XLSX.writeFile(wb,`任务积分记录_${new Date().toISOString().slice(0,10)}.xlsx`); });
+        if(modeToggleBtn) modeToggleBtn.addEventListener('click', toggleMode);
+        initializeGrid();
+    })();
+
+    // --- App 6: 碎片拼图 ---
+    (function() {
+        const container = document.getElementById('page-jigsaw'); if (!container) return;
+        const jigsawContainer = container.querySelector('#jigsaw-container'), modeControls = container.querySelector('#jigsaw-mode-controls'), exportBtn = container.querySelector('#jigsaw-export-btn');
+        const taskInputsContainer = container.querySelector('#jigsaw-task-inputs');
+        const NUM_STUDENTS = 40, PETAL_COLORS = ['red', 'yellow', 'blue', 'green', 'purple']; let jigsawData = {}, currentPetalCount = 3, taskNames = ['任务1', '任务2', '任务3'];
+
+        // 生成任务名称输入框
+        function renderTaskInputs() {
+            if(!taskInputsContainer) return;
+            taskInputsContainer.innerHTML = '';
+
+            for(let i = 1; i <= currentPetalCount; i++) {
+                const inputWrapper = document.createElement('div');
+                inputWrapper.className = 'flex flex-col';
+
+                const label = document.createElement('label');
+                label.className = 'text-sm font-bold text-gray-700 mb-1';
+                label.textContent = `花瓣${i}`;
+                inputWrapper.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'py-2 px-3 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none text-blue-800 font-medium';
+                input.placeholder = `输入花瓣${i}的任务名称`;
+                input.dataset.petalIndex = i;
+                input.value = taskNames[i-1] || '';
+
+                // 保存任务名称
+                input.addEventListener('input', (e) => {
+                    taskNames[i-1] = e.target.value || `任务${i}`;
+                });
+
+                inputWrapper.appendChild(input);
+                taskInputsContainer.appendChild(inputWrapper);
+            }
+        }
+
+        function checkAndStyleCenter(studentId) { let allComplete = true; for (let p = 1; p <= currentPetalCount; p++) { if (!jigsawData[`s${studentId}-p${p}`]) { allComplete = false; break; } } const clover = jigsawContainer.querySelector(`.jigsaw-clover[data-student-id='${studentId}']`); if (clover) clover.querySelector('.clover-center').classList.toggle('completed', allComplete); }
+        function renderGrid() { if(!jigsawContainer) return; jigsawContainer.innerHTML = ''; for (let s = 1; s <= NUM_STUDENTS; s++) { const clover = document.createElement('div'); clover.className = `jigsaw-clover clover-${currentPetalCount}`; clover.dataset.studentId = s; const center = document.createElement('div'); center.className = 'clover-center'; center.textContent = s; clover.appendChild(center); for (let p = 1; p <= currentPetalCount; p++) { const petal = document.createElement('div'); const key = `s${s}-p${p}`, isComplete = jigsawData[key] || false, color = PETAL_COLORS[p-1]; petal.className = `petal p-${p} ${isComplete ? `petal-${color}-dark` : `petal-${color}-light`}`; petal.dataset.student = s; petal.dataset.petal = p; petal.dataset.color = color; petal.addEventListener('click', handlePetalClick); clover.appendChild(petal); } jigsawContainer.appendChild(clover); checkAndStyleCenter(s); } }
+        function handlePetalClick(e) { const petal = e.target, { student, petal: petalIndex, color } = petal.dataset, key = `s${student}-p${petalIndex}`; const isComplete = !jigsawData[key]; jigsawData[key] = isComplete; petal.className = `petal p-${petalIndex} ${isComplete ? `petal-${color}-dark` : `petal-${color}-light`}`; checkAndStyleCenter(student); }
+        function switchMode(e) { if (!e.target.matches('.mode-button')) return; const newPetalCount = parseInt(e.target.dataset.petals, 10); if (newPetalCount === currentPetalCount) return; currentPetalCount = newPetalCount; modeControls.querySelectorAll('.mode-button').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.petals, 10) === currentPetalCount)); renderTaskInputs(); renderGrid(); }
+        if(exportBtn) exportBtn.addEventListener('click', () => {
+            const data = [], header = ['学号'];
+            // 使用任务名称而不是"任务1"、"任务2"
+            for (let i = 0; i < currentPetalCount; i++) {
+                header.push(taskNames[i] || `任务${i+1}`);
+            }
+            header.push('完成数量');
+            data.push(header);
+
+            for (let s = 1; s <= NUM_STUDENTS; s++) {
+                const row = [s];
+                let completedCount = 0;
+                for (let p = 1; p <= currentPetalCount; p++) {
+                    const key = `s${s}-p${p}`, isComplete = jigsawData[key] || false;
+                    row.push(isComplete ? '已完成' : '');
+                    if (isComplete) completedCount++;
+                }
+                row.push(completedCount);
+                data.push(row);
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, `拼图任务记录-${currentPetalCount}瓣`);
+            XLSX.writeFile(wb, `碎片拼图记录_${new Date().toISOString().slice(0,10)}.xlsx`);
+        });
+        if(modeControls) { modeControls.addEventListener('click', switchMode); const defaultModeBtn = modeControls.querySelector('[data-petals="3"]'); if (defaultModeBtn) defaultModeBtn.classList.add('active'); }
+        renderTaskInputs();
+        renderGrid();
+    })();
+
+    // --- App 7: 座位热力图 ---
+    (function() {
+        const container = document.getElementById('page-heatmap');
+        if (!container) return;
+        const mainSeatsContainer = container.querySelector('#heatmap-main-seats');
+        const specialSeatLeft = container.querySelector('#heatmap-special-seat-left');
+        const specialSeatRight = container.querySelector('#heatmap-special-seat-right');
+        const modeToggleBtn = container.querySelector('#heatmap-mode-toggle-btn');
+        const exportBtn = container.querySelector('#heatmap-export-btn');
+        
+        const NUM_GROUPS = 4, ROWS_PER_GROUP = 7, SEATS_PER_ROW = 2, SPECIAL_SEATS = 2;
+        let heatmapData = {};
+        let heatmapLog = []; 
+        let isIncrementMode = true;
+
+        function formatTimestamp(date) {
+            const Y = date.getFullYear();
+            const M = String(date.getMonth() + 1).padStart(2, '0');
+            const D = String(date.getDate()).padStart(2, '0');
+            const h = String(date.getHours()).padStart(2, '0');
+            const m = String(date.getMinutes()).padStart(2, '0');
+            const s = String(date.getSeconds()).padStart(2, '0');
+            return `${Y}-${M}-${D} ${h}:${m}:${s}`;
+        }
+
+        function getSeatName(seatId) {
+            const parts = seatId.split('-');
+            if (parts[1] === 'g') {
+                const group = parts[2];
+                const row = parts[3].slice(1);
+                const side = parts[4].slice(1) === '1' ? '左' : '右';
+                return `第${group}组-第${row}排-${side}`;
+            } else {
+                const side = parts[2] === '1' ? '左' : '右';
+                return `讲台旁-${side}`;
+            }
+        }
+        
+        function updateGroupTotal(groupId) {
+            let total = 0;
+            for (let r = 1; r <= ROWS_PER_GROUP; r++) {
+                for (let s = 1; s <= SEATS_PER_ROW; s++) {
+                    const seatId = `seat-g-${groupId}-r${r}-s${s}`;
+                    if(heatmapData[seatId] !== undefined) {
+                        total += heatmapData[seatId];
+                    }
+                }
+            }
+            const totalEl = document.getElementById(`group-total-${groupId}`);
+            if (totalEl) {
+                totalEl.textContent = `本组总分: ${total}`;
+            }
+        }
+
+        function updateAllGroupTotals() {
+            for (let g = 1; g <= NUM_GROUPS; g++) {
+                updateGroupTotal(g);
+            }
+        }
+        
+        function handleSeatClick(e) {
+            const seat = e.target;
+            const seatId = seat.id;
+            let currentScore = Number(heatmapData[seatId] || 0);
+            let newScore;
+
+            if (isIncrementMode) {
+                newScore = currentScore + 1;
+            } else {
+                newScore = currentScore <= 0 ? 0 : currentScore - 1;
+            }
+            
+            heatmapData[seatId] = newScore;
+            seat.textContent = newScore;
+            
+            heatmapLog.push({
+                seatId: seatId,
+                change: isIncrementMode ? '+1' : '-1',
+                scoreAfter: newScore,
+                timestamp: new Date()
+            });
+            
+            const parts = seatId.split('-');
+            if (parts[1] === 'g') {
+                const groupId = parts[2];
+                updateGroupTotal(groupId);
+            }
+        }
+
+        function handleGroupScoreClick(e) {
+            const groupId = e.target.dataset.groupId;
+            for (let r = 1; r <= ROWS_PER_GROUP; r++) {
+                for (let s = 1; s <= SEATS_PER_ROW; s++) {
+                    const seatId = `seat-g-${groupId}-r${r}-s${s}`;
+                    const seatEl = document.getElementById(seatId);
+                    if (seatEl) {
+                       handleSeatClick({ target: seatEl });
+                    }
+                }
+            }
+        }
+
+        function renderSeat(id, score) {
+            const seat = document.createElement('div');
+            seat.id = id;
+            seat.className = `heatmap-seat heat-static-color`;
+            seat.textContent = score;
+            seat.addEventListener('click', handleSeatClick);
+            return seat;
+        }
+
+        function renderLayout() {
+            if (!mainSeatsContainer || !specialSeatLeft || !specialSeatRight) return;
+            mainSeatsContainer.innerHTML = '';
+            specialSeatLeft.innerHTML = '';
+            specialSeatRight.innerHTML = '';
+
+            for (let g = 1; g <= NUM_GROUPS; g++) {
+                const groupWrapper = document.createElement('div');
+                groupWrapper.className = 'flex flex-col items-center space-y-2';
+
+                const groupOpButton = document.createElement('button');
+                groupOpButton.textContent = `第${g}组 加/减分`;
+                groupOpButton.dataset.groupId = g;
+                groupOpButton.className = 'group-op-button py-1 px-3 rounded-md text-sm font-semibold';
+                groupOpButton.addEventListener('click', handleGroupScoreClick);
+
+                const seatsContainer = document.createElement('div');
+                seatsContainer.className = 'space-y-2';
+
+                for (let r = 1; r <= ROWS_PER_GROUP; r++) {
+                    const rowEl = document.createElement('div');
+                    rowEl.className = 'flex justify-center space-x-2';
+                    for (let s = 1; s <= SEATS_PER_ROW; s++) {
+                        const seatId = `seat-g-${g}-r${r}-s${s}`;
+                        const score = heatmapData[seatId] === undefined ? 0 : heatmapData[seatId];
+                        heatmapData[seatId] = score;
+                        rowEl.appendChild(renderSeat(seatId, score));
+                    }
+                    seatsContainer.appendChild(rowEl);
+                }
+                
+                const groupTotalEl = document.createElement('div');
+                groupTotalEl.id = `group-total-${g}`;
+                groupTotalEl.className = 'group-total font-bold text-center py-1 px-3 rounded-md';
+
+                groupWrapper.append(groupOpButton, seatsContainer, groupTotalEl);
+                mainSeatsContainer.appendChild(groupWrapper);
+            }
+            
+            for (let i = 1; i <= SPECIAL_SEATS; i++) {
+                const seatId = `seat-sp-${i}`;
+                const score = heatmapData[seatId] === undefined ? 0 : heatmapData[seatId];
+                heatmapData[seatId] = score;
+                const seatEl = renderSeat(seatId, score);
+                if (i === 1) {
+                    specialSeatLeft.appendChild(seatEl);
+                } else {
+                    specialSeatRight.appendChild(seatEl);
+                }
+            }
+            updateAllGroupTotals();
+        }
+
+        function toggleMode() {
+            isIncrementMode = !isIncrementMode;
+            if (isIncrementMode) {
+                modeToggleBtn.textContent = '当前为：加分模式';
+                modeToggleBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                modeToggleBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            } else {
+                modeToggleBtn.textContent = '当前为：减分模式';
+                modeToggleBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                modeToggleBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+            }
+        }
+        
+        if(exportBtn) exportBtn.addEventListener('click', () => {
+            // --- Create Layout Worksheet ---
+            const layoutData = [];
+            let classTotalScore = 0;
+            const totalCols = 11;
+
+            const row1 = Array(totalCols).fill(null);
+            row1[0] = heatmapData['seat-sp-1'] ?? 0;
+            row1[4] = '讲台';
+            row1[10] = heatmapData['seat-sp-2'] ?? 0;
+            layoutData.push(row1);
+            layoutData.push(Array(totalCols).fill(null));
+
+            const headerRow = Array(totalCols).fill(null);
+            for(let g = 1; g <= NUM_GROUPS; g++){
+                const colBase = (g - 1) * 3;
+                headerRow[colBase] = `第${g}组左`;
+                headerRow[colBase+1] = `第${g}组右`;
+            }
+            layoutData.push(headerRow);
+
+            for (let r = 1; r <= ROWS_PER_GROUP; r++) {
+                const rowData = Array(totalCols).fill(null);
+                for (let g = 1; g <= NUM_GROUPS; g++) {
+                    const colBase = (g - 1) * 3;
+                    rowData[colBase] = heatmapData[`seat-g-${g}-r${r}-s1`] ?? 0;
+                    rowData[colBase + 1] = heatmapData[`seat-g-${g}-r${r}-s2`] ?? 0;
+                }
+                layoutData.push(rowData);
+            }
+            layoutData.push(Array(totalCols).fill(null));
+
+            const totalsRow = Array(totalCols).fill(null);
+            for (let g = 1; g <= NUM_GROUPS; g++) {
+                 let groupTotal = 0;
+                 for (let r = 1; r <= ROWS_PER_GROUP; r++) {
+                    for (let s = 1; s <= SEATS_PER_ROW; s++) {
+                        groupTotal += heatmapData[`seat-g-${g}-r${r}-s${s}`] ?? 0;
+                    }
+                }
+                const colBase = (g - 1) * 3;
+                totalsRow[colBase] = `第${g}组总分:`;
+                totalsRow[colBase + 1] = groupTotal;
+                classTotalScore += groupTotal;
+            }
+            layoutData.push(totalsRow);
+            layoutData.push(Array(totalCols).fill(null)); 
+
+            classTotalScore += (heatmapData['seat-sp-1'] ?? 0);
+            classTotalScore += (heatmapData['seat-sp-2'] ?? 0);
+
+            const classTotalRow = Array(totalCols).fill(null);
+            classTotalRow[0] = '全班总分:';
+            classTotalRow[1] = classTotalScore;
+            layoutData.push(classTotalRow);
+
+            const layoutWorksheet = XLSX.utils.aoa_to_sheet(layoutData);
+            const merges = [{ s: { r: 0, c: 3 }, e: { r: 0, c: 7 } }];
+            const totalsRowIndex = ROWS_PER_GROUP + 4;
+             for (let g = 0; g < NUM_GROUPS; g++) {
+                merges.push({ s: { r: totalsRowIndex, c: g * 3 }, e: { r: totalsRowIndex, c: g * 3 } }); 
+            }
+            layoutWorksheet['!merges'] = merges;
+            layoutWorksheet['!cols'] = [ {wch:10}, {wch:10}, {wch:5}, {wch:10}, {wch:10}, {wch:5}, {wch:10}, {wch:10}, {wch:5}, {wch:10}, {wch:10} ];
+
+            // --- Create Log Worksheet ---
+            const logData = [];
+            logData.push(['座位位置', '操作', '操作后分数', '时间']);
+            heatmapLog.forEach(log => {
+                logData.push([
+                    getSeatName(log.seatId),
+                    log.change,
+                    log.scoreAfter,
+                    formatTimestamp(log.timestamp)
+                ]);
+            });
+            const logWorksheet = XLSX.utils.aoa_to_sheet(logData);
+            logWorksheet['!cols'] = [ {wch:20}, {wch:10}, {wch:15}, {wch:25} ];
+
+            // --- Create Workbook and Download ---
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, layoutWorksheet, "座位热力图");
+            XLSX.utils.book_append_sheet(workbook, logWorksheet, "详细操作日志");
+            XLSX.writeFile(workbook, `座位热力图记录_${new Date().toISOString().slice(0,10)}.xlsx`);
+        });
+
+        if(modeToggleBtn) modeToggleBtn.addEventListener('click', toggleMode);
+        renderLayout();
+    })();
+    
+    // --- App X: 积分登记（本地打开即用） ---
+    (function () {
+        const container = document.getElementById('page-score');
+        if (!container) return;
+
+        const STUDENT_COUNT = 40; // 可配置：默认 1～40
+
+        const dateInput = container.querySelector('#score-date');
+        const taskInput = container.querySelector('#score-task');
+        const defaultValueEl = container.querySelector('#score-default-value');
+        const defaultMinusBtn = container.querySelector('#score-default-minus');
+        const defaultPlusBtn = container.querySelector('#score-default-plus');
+        const bubblesContainer = container.querySelector('#score-bubbles-container');
+        const exportBtn = container.querySelector('#score-export-btn');
+
+        let defaultScore = 3;
+        let scores = Array.from({ length: STUDENT_COUNT }, () => defaultScore);
+
+        function getLocalDateYYYYMMDD(d = new Date()) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        // 把 YYYY-MM-DD 解析成 Date（Excel 会识别为日期类型）
+        function parseLocalDate(dateStr) {
+            const parts = String(dateStr).split('-').map(n => parseInt(n, 10));
+            if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return null;
+            const [y, m, d] = parts;
+            return new Date(y, m - 1, d);
+        }
+
+        function sanitizeTaskName(name) {
+            return String(name || '')
+                .trim()
+                .replace(/[\/\\:\*\?"<>\|]/g, '') // 清理文件名非法字符
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function updateDefaultScoreDisplay() {
+            if (defaultValueEl) defaultValueEl.textContent = String(defaultScore);
+        }
+
+        function resetAllScoresToDefault() {
+            scores = Array.from({ length: STUDENT_COUNT }, () => defaultScore);
+            for (let i = 1; i <= STUDENT_COUNT; i++) {
+                const label = document.getElementById(`score-label-${i}`);
+                if (label) label.textContent = String(defaultScore);
+            }
+        }
+
+        function updateStudentScoreLabel(studentId) {
+            const label = document.getElementById(`score-label-${studentId}`);
+            if (label) label.textContent = String(scores[studentId - 1]);
+        }
+
+        function renderBubbles() {
+            if (!bubblesContainer) return;
+            bubblesContainer.innerHTML = '';
+
+            for (let i = 1; i <= STUDENT_COUNT; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'flex flex-col items-center select-none';
+
+                const scoreBadge = document.createElement('div');
+                scoreBadge.id = `score-label-${i}`;
+                scoreBadge.className = 'score-badge text-sm mb-2';
+                scoreBadge.textContent = String(scores[i - 1]);
+
+                const wrap = document.createElement('div');
+                // 泡泡适中，但按钮命中区更大：按钮占据左右整块区域
+                wrap.className = 'relative w-14 h-14 sm:w-16 sm:h-16';
+
+                const bubbleEl = document.createElement('div');
+                bubbleEl.className = 'bubble aspect-square rounded-full p-0.5 w-full h-full';
+
+                const fillEl = document.createElement('div');
+                fillEl.className = 'bubble-fill-effect';
+                fillEl.style.height = '0%';
+
+                const contentEl = document.createElement('div');
+                contentEl.className = 'bubble-content score-bubble-content';
+
+                const minusBtn = document.createElement('button');
+                minusBtn.type = 'button';
+                minusBtn.dataset.action = 'minus';
+                minusBtn.dataset.id = String(i);
+                minusBtn.className = 'score-inner-btn';
+                minusBtn.textContent = '-';
+                minusBtn.setAttribute('aria-label', `学生${i}减分`);
+
+                const numberEl = document.createElement('div');
+                numberEl.className = 'bubble-number score-number';
+                numberEl.textContent = String(i);
+
+                const plusBtn = document.createElement('button');
+                plusBtn.type = 'button';
+                plusBtn.dataset.action = 'plus';
+                plusBtn.dataset.id = String(i);
+                plusBtn.className = 'score-inner-btn';
+                plusBtn.textContent = '+';
+                plusBtn.setAttribute('aria-label', `学生${i}加分`);
+
+                contentEl.append(minusBtn, numberEl, plusBtn);
+                bubbleEl.append(fillEl, contentEl);
+
+                wrap.appendChild(bubbleEl);
+                cell.append(scoreBadge, wrap);
+                bubblesContainer.appendChild(cell);
+            }
+        }
+
+        function changeDefaultScore(delta) {
+            defaultScore += delta;
+            updateDefaultScoreDisplay();
+            // 规则：改默认分 -> 全班统一重置为新的默认分
+            resetAllScoresToDefault();
+        }
+
+        function handleBubbleAreaClick(e) {
+            const btn = e.target.closest('button[data-action][data-id]');
+            if (!btn) return;
+
+            const id = parseInt(btn.dataset.id, 10);
+            if (!id || id < 1 || id > STUDENT_COUNT) return;
+
+            const action = btn.dataset.action;
+            if (action === 'minus') scores[id - 1] = scores[id - 1] - 1;
+            if (action === 'plus') scores[id - 1] = scores[id - 1] + 1;
+
+            updateStudentScoreLabel(id);
+        }
+
+        function exportToExcel() {
+            const dateStr = (dateInput?.value || '').trim();
+            const rawTask = (taskInput?.value || '').trim();
+
+            if (!dateStr || !rawTask) {
+                alert('请先填写「日期」和「任务」后再导出。');
+                return;
+            }
+
+            const taskName = sanitizeTaskName(rawTask);
+            if (!taskName) {
+                alert('任务名称只包含非法字符，请重新输入。');
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                alert('导出组件 XLSX 未加载成功。请检查网络或刷新后重试。');
+                return;
+            }
+
+            // 合并日期和任务名称作为表头
+            const headerName = `${dateStr}${taskName}`;
+            const rows = [[headerName, '学号', '分数']];
+
+            for (let i = 1; i <= STUDENT_COUNT; i++) {
+                rows.push([headerName, i, scores[i - 1]]);
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'records');
+            XLSX.writeFile(wb, `${headerName}.xlsx`);
+        }
+
+        // 合并历史统计功能
+        async function mergeHistoricalScores() {
+            const fileInput = document.getElementById('score-file-input');
+            if (!fileInput) {
+                alert('文件选择器未找到，请刷新页面重试。');
+                return;
+            }
+
+            fileInput.value = '';
+            fileInput.click();
+
+            fileInput.onchange = async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+
+                if (typeof XLSX === 'undefined') {
+                    alert('Excel组件未加载，请检查网络连接。');
+                    return;
+                }
+
+                try {
+                    // 读取所有Excel文件
+                    const allData = [];
+
+                    for (const file of files) {
+                        const data = await readExcelFile(file);
+                        allData.push(...data);
+                    }
+
+                    if (allData.length === 0) {
+                        alert('未找到有效数据，请检查Excel文件格式。');
+                        return;
+                    }
+
+                    // 按学号和任务分组统计
+                    const studentStats = {};
+
+                    allData.forEach(row => {
+                        // 读取Excel数据，处理列名
+                        const values = Object.values(row); // 获取所有值
+                        if (values.length < 3) return; // 跳过不完整的行
+
+                        // 第一列的值就是任务名称（如"2026-1-6听写"）
+                        const taskName = values[0];
+                        const studentId = values[1]; // 学号
+                        const score = parseInt(values[2]) || 0; // 分数
+
+                        if (!studentStats[studentId]) {
+                            studentStats[studentId] = {
+                                '学号': studentId,
+                                '总分': 0,
+                                '任务记录': {}
+                            };
+                        }
+
+                        studentStats[studentId]['总分'] += score;
+                        studentStats[studentId]['任务记录'][taskName] = score;
+                    });
+
+                    // 收集所有任务名称
+                    const allTasks = new Set();
+                    Object.values(studentStats).forEach(student => {
+                        Object.keys(student['任务记录']).forEach(task => {
+                            allTasks.add(task);
+                        });
+                    });
+                    const sortedTasks = Array.from(allTasks).sort();
+
+                    // 转换为数组并计算排名
+                    const studentsArray = Object.values(studentStats);
+                    studentsArray.sort((a, b) => b['总分'] - a['总分']);
+
+                    studentsArray.forEach((student, index) => {
+                        student['排名'] = index + 1;
+                    });
+
+                    // 构建Excel数据：学号、任务1名字、任务2名字、...、总分、排名
+                    const rows = [['学号', ...sortedTasks, '总分', '排名']];
+
+                    studentsArray.forEach(student => {
+                        const row = [student['学号']];
+                        sortedTasks.forEach(task => {
+                            row.push(student['任务记录'][task] || 0);
+                        });
+                        row.push(student['总分']);
+                        row.push(student['排名']);
+                        rows.push(row);
+                    });
+
+                    // 导出Excel
+                    const ws = XLSX.utils.aoa_to_sheet(rows);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, '积分统计');
+
+                    const filename = `学生积分统计汇总_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                    XLSX.writeFile(wb, filename);
+
+                    alert(`成功！已合并 ${files.length} 个文件，统计 ${studentsArray.length} 名学生。`);
+
+                } catch (error) {
+                    console.error('合并统计失败:', error);
+                    alert('合并统计失败：' + error.message);
+                }
+            };
+        }
+
+        // 读取单个Excel文件
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                        resolve(jsonData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                reader.onerror = () => reject(new Error('文件读取失败'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function init() {
+            if (dateInput) dateInput.value = getLocalDateYYYYMMDD(new Date());
+            updateDefaultScoreDisplay();
+            renderBubbles();
+
+            defaultMinusBtn?.addEventListener('click', () => changeDefaultScore(-1));
+            defaultPlusBtn?.addEventListener('click', () => changeDefaultScore(1));
+            bubblesContainer?.addEventListener('click', handleBubbleAreaClick);
+            exportBtn?.addEventListener('click', exportToExcel);
+
+            // 添加合并统计按钮事件
+            const mergeBtn = document.getElementById('score-merge-btn');
+            if (mergeBtn) {
+                mergeBtn.addEventListener('click', mergeHistoricalScores);
+            }
+        }
+
+        init();
+    })();
+
+</script>
+</body>
+</html>
